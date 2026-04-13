@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>EMS Dashboard - Receiver</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .header { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
+        #floatingWindow {
+            position: absolute; z-index: 999; width: 480px; height: 320px;
+            min-width: 300px; min-height: 200px; background: #000;
+            border: 4px solid #333; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            top: 150px; left: 50px; overflow: auto; resize: both;
+        }
+        #windowHeader {
+            padding: 12px; background: #222; color: #00ff00; cursor: move;
+            display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #444;
+        }
+        .video-box { width: 100%; height: calc(100% - 45px); display: flex; background: #000; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+        input { padding: 12px; border: 1px solid #ddd; border-radius: 6px; width: 200px; font-size: 16px; }
+        button { padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2 style="margin:0; margin-right: 20px;">ศูนย์สั่งการ EMS</h2>
+        <input type="text" id="targetId" value="NAVY-EMS-01">
+        <button onclick="connectToCamera()">เรียกดูภาพสด</button>
+    </div>
+
+    <div id="floatingWindow">
+        <div id="windowHeader">
+            <span>🔴 LIVE: VM780</span>
+            <span id="stat">OFFLINE</span>
+        </div>
+        <div class="video-box">
+            <video id="remoteVideo" autoplay playsinline controls></video>
+        </div>
+    </div>
+
+    <script>
+        const peer = new Peer();
+        const floatWin = document.getElementById("floatingWindow");
+        const header = document.getElementById("windowHeader");
+
+        function connectToCamera() {
+            const tid = document.getElementById('targetId').value;
+            document.getElementById('stat').innerText = "CONNECTING...";
+            const call = peer.call(tid, new MediaStream());
+            call.on('stream', stream => {
+                document.getElementById('remoteVideo').srcObject = stream;
+                document.getElementById('stat').innerText = "ONLINE";
+                document.getElementById('stat').style.color = "#ff4444";
+            });
+        }
+
+        // ระบบลากหน้าต่าง
+        dragElement(floatWin);
+        function dragElement(elm) {
+            let p1=0, p2=0, p3=0, p4=0;
+            header.onmousedown = (e) => {
+                if (e.target !== header && e.target.parentElement !== header) return;
+                e.preventDefault();
+                p3 = e.clientX; p4 = e.clientY;
+                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+                document.onmousemove = (e) => {
+                    e.preventDefault();
+                    p1 = p3 - e.clientX; p2 = p4 - e.clientY;
+                    p3 = e.clientX; p4 = e.clientY;
+                    elm.style.top = (elm.offsetTop - p2) + "px";
+                    elm.style.left = (elm.offsetLeft - p1) + "px";
+                };
+            };
+        }
+    </script>
+</body>
+</html>
