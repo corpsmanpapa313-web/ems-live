@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>EMS Sender - VM780</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; margin: 0; padding: 10px; }
+        .id-label { background: #333; padding: 15px; border-radius: 8px; color: #00ff00; font-size: 1.4em; margin-bottom: 10px; border: 1px solid #444; }
+        video { width: 100%; border-radius: 10px; background: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        button { width: 100%; padding: 20px; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 10px; margin-top: 15px; font-weight: bold; cursor: pointer; }
+        .status { font-size: 14px; color: #aaa; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="id-label">กล้องรหัส: <span id="my-id">กำลังเชื่อมต่อ...</span></div>
+    <video id="localVideo" autoplay muted playsinline></video>
+    <button onclick="startCamera()">[ 1 ] เปิดกล้องส่งสัญญาณ</button>
+    <div class="status">สถานะ: <span id="conn-status">รอกดเปิดกล้อง</span></div>
+
+    <script>
+        // ตั้งชื่อ ID ให้ศูนย์จำง่ายๆ
+        const peer = new Peer('NAVY-EMS-01'); 
+        let localStream;
+
+        peer.on('open', id => {
+            document.getElementById('my-id').innerText = id;
+            document.getElementById('conn-status').innerText = "พร้อมใช้งาน";
+        });
+
+        async function startCamera() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment", width: 1280, height: 720 },
+                    audio: true
+                });
+                document.getElementById('localVideo').srcObject = localStream;
+                document.getElementById('conn-status').innerText = "กำลังรอการเชื่อมต่อจากศูนย์...";
+            } catch (err) {
+                alert("ไม่สามารถเปิดกล้องได้: " + err);
+            }
+        }
+
+        peer.on('call', call => {
+            document.getElementById('conn-status').innerText = "🔴 กำลังไลฟ์สดไปยังศูนย์...";
+            call.answer(localStream);
+        });
+    </script>
+</body>
+</html>
