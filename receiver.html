@@ -2,100 +2,60 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>EMS Dashboard - Receiver</title>
+    <title>RECEIVER - Command Center</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-        .controls { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 500px; margin-bottom: 20px; }
-        
-        /* หน้าต่างลอยลากได้ย่อขยายได้ */
-        #floatingWindow {
-            position: absolute; z-index: 999;
-            width: 450px; height: 340px;
-            min-width: 250px; min-height: 200px;
-            background: #000; border: 2px solid #333; border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            top: 150px; left: 50px;
-            overflow: auto; resize: both;
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .box { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 450px; }
+        #video-container { 
+            position: absolute; top: 20px; right: 20px; width: 400px; 
+            background: #000; border-radius: 10px; overflow: hidden; border: 2px solid #333;
         }
-
-        #windowHeader {
-            padding: 10px; background: #222; color: #00ff00;
-            cursor: move; display: flex; justify-content: space-between;
-            font-weight: bold; font-size: 13px; position: sticky; top: 0;
-        }
-
-        video { width: 100%; height: calc(100% - 40px); background: #000; object-fit: contain; }
-        input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 180px; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        #stream-status { font-size: 11px; }
+        video { width: 100%; display: block; }
+        button { padding: 12px 24px; background: #007bff; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        input { padding: 11px; border: 1px solid #ddd; border-radius: 6px; width: 150px; }
     </style>
 </head>
 <body>
 
-    <div class="controls">
-        <h2>ระบบศูนย์สั่งการ EMS</h2>
+    <div class="box">
+        <h3>ศูนย์สั่งการ EMS</h3>
         <input type="text" id="targetId" value="NAVY-EMS-01">
-        <button onclick="connectToCamera()">[ 2 ] เรียกดูภาพสด</button>
-        <p id="peer-id" style="font-size: 12px; color: #666;">กำลังเตรียมระบบ...</p>
+        <button onclick="connect()">[ 2 ] ดูภาพสด</button>
+        <p id="info" style="font-size: 12px; color: #888;">กำลังโหลดระบบ...</p>
     </div>
 
-    <div id="floatingWindow">
-        <div id="windowHeader">
-            <span>🔴 LIVE: VM780</span>
-            <span id="stream-status">OFFLINE</span>
-        </div>
+    <div id="video-container">
+        <div style="background: #222; color: #0f0; padding: 5px 10px; font-size: 12px;">🔴 LIVE MONITOR</div>
         <video id="remoteVideo" autoplay playsinline controls></video>
     </div>
 
     <script>
-        // สำคัญ: ห้ามใส่ ID ในวงเล็บ Peer()
-        const peer = new Peer({
-            config: { 'iceServers': [{ url: 'stun:stun.l.google.com:19302' }] }
-        });
+        const peer = new Peer(); // สุ่ม ID เอง
 
         peer.on('open', id => {
-            document.getElementById('peer-id').innerText = "ระบบศูนย์พร้อม (ID: " + id + ")";
+            document.getElementById('info').innerText = "ระบบศูนย์พร้อมแล้ว (ID: " + id + ")";
         });
 
-        function connectToCamera() {
+        function connect() {
             const tid = document.getElementById('targetId').value;
-            document.getElementById('stream-status').innerText = "CONNECTING...";
+            document.getElementById('info').innerText = "กำลังเชื่อมต่อไปยัง " + tid + "...";
             
-            // สำคัญ: ต้องสร้าง MediaStream เปล่าส่งไปเพื่อ "เคาะประตู" ขอรับภาพ
+            // ใช้ MediaStream เปล่าเพื่อเริ่มการเชื่อมต่อ
             const call = peer.call(tid, new MediaStream());
             
-            call.on('stream', stream => {
+            call.on('stream', remoteStream => {
                 const video = document.getElementById('remoteVideo');
-                video.srcObject = stream;
-                document.getElementById('stream-status').innerText = "ONLINE";
-                document.getElementById('stream-status').style.color = "#ff4444";
+                video.srcObject = remoteStream;
+                // บังคับให้เล่นวิดีโอ (ป้องกัน Browser บล็อก)
+                video.play().catch(e => console.log("Auto-play blocked, wait for user interaction"));
+                document.getElementById('info').innerText = "เชื่อมต่อสำเร็จ!";
             });
 
             call.on('error', err => {
-                alert("ไม่สามารถเชื่อมต่อได้: " + err);
-                document.getElementById('stream-status').innerText = "OFFLINE";
+                alert("การเชื่อมต่อผิดพลาด: " + err);
+                document.getElementById('info').innerText = "การเชื่อมต่อล้มเหลว";
             });
-        }
-
-        // ระบบลากหน้าต่าง
-        dragElement(document.getElementById("floatingWindow"));
-        function dragElement(elm) {
-            let p1=0, p2=0, p3=0, p4=0;
-            const head = document.getElementById("windowHeader");
-            head.onmousedown = (e) => {
-                if (e.target !== head && e.target.parentElement !== head) return;
-                e.preventDefault();
-                p3 = e.clientX; p4 = e.clientY;
-                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
-                document.onmousemove = (e) => {
-                    e.preventDefault();
-                    p1 = p3 - e.clientX; p2 = p4 - e.clientY;
-                    p3 = e.clientX; p4 = e.clientY;
-                    elm.style.top = (elm.offsetTop - p2) + "px";
-                    elm.style.left = (elm.offsetLeft - p1) + "px";
-                };
-            };
         }
     </script>
 </body>
