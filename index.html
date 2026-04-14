@@ -1,69 +1,30 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VM780 Sender</title>
+    <title>SENDER</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; margin: 0; padding: 10px; }
-        .id-label { background: #333; padding: 10px; border-radius: 5px; color: #00ff00; font-size: 1.2em; margin-bottom: 10px; border: 1px solid #444; }
-        video { width: 100%; border-radius: 10px; background: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        button { width: 100%; padding: 18px; font-size: 18px; background: #28a745; color: white; border: none; border-radius: 8px; margin-top: 15px; font-weight: bold; cursor: pointer; }
-        .status { font-size: 14px; color: #aaa; margin-top: 10px; }
+        body { background: #000; color: #0f0; text-align: center; font-family: sans-serif; }
+        video { width: 100%; max-width: 400px; background: #222; }
+        button { padding: 20px; width: 80%; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 10px; margin: 10px; }
     </style>
 </head>
 <body>
-    <div class="id-label">กล้องรหัส: <span id="my-id">กำลังเชื่อมต่อ...</span></div>
-    
-    <video id="localVideo" autoplay muted playsinline></video>
-    
-    <button onclick="startCamera()">[ 1 ] เปิดกล้องส่งสัญญาณ</button>
-    <div class="status">สถานะ: <span id="conn-status">รอการกดเปิดกล้อง</span></div>
-
+    <h3>ID: <span id="my-id">กำลังโหลด...</span></h3>
+    <video id="localVideo" autoplay muted playsinline></video><br>
+    <button onclick="start()">[ 1 ] เปิดกล้อง</button>
     <script>
-        // ตั้งค่า Peer พร้อมระบบช่วยเจาะ Firewall (STUN Server)
         const peer = new Peer('NAVY-EMS-01', {
-            config: {
-                'iceServers': [
-                    { url: 'stun:stun.l.google.com:19302' },
-                    { url: 'stun:stun1.l.google.com:19302' }
-                ]
-            }
-        }); 
-
-        let localStream;
-
-        peer.on('open', id => {
-            document.getElementById('my-id').innerText = id;
-            document.getElementById('conn-status').innerText = "พร้อมใช้งาน (Ready)";
+            config: {'iceServers': [{ url: 'stun:stun.l.google.com:19302' }]}
         });
-
-        async function startCamera() {
-            try {
-                // ดึงภาพจากกล้องหลัง VM780
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } },
-                    audio: true
-                });
-                document.getElementById('localVideo').srcObject = localStream;
-                document.getElementById('conn-status').innerText = "กล้องทำงานแล้ว รอศูนย์เรียกดู...";
-            } catch (err) {
-                alert("เข้าถึงกล้องไม่ได้: " + err);
-            }
+        let stream;
+        peer.on('open', id => document.getElementById('my-id').innerText = id);
+        async function start() {
+            stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}, audio: true});
+            document.getElementById('localVideo').srcObject = stream;
         }
-
-        // ตอบรับสายอัตโนมัติ (หัวใจหลักของการส่งภาพ)
-        peer.on('call', call => {
-            console.log("มีการเชื่อมต่อจากศูนย์สั่งการ...");
-            document.getElementById('conn-status').innerText = "🔴 กำลังสตรีมภาพสดไปยังศูนย์...";
-            call.answer(localStream); 
-        });
-
-        peer.on('error', err => {
-            console.error(err);
-            if(err.type === 'unavailable-id') alert('ID นี้ถูกใช้งานอยู่แล้วในหน้าต่างอื่น');
-        });
+        peer.on('call', call => call.answer(stream));
     </script>
 </body>
 </html>
