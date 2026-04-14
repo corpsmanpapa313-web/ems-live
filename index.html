@@ -2,60 +2,64 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAVY EMS SENDER</title>
+    <title>SENDER - VM780</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <style>
-        body { background: #121212; color: #00ff00; text-align: center; font-family: sans-serif; margin: 0; padding: 10px; }
-        .id-label { background: #222; padding: 10px; border-radius: 5px; border: 1px solid #333; margin-bottom: 10px; }
-        video { width: 100%; max-width: 500px; border-radius: 10px; background: #000; border: 2px solid #333; }
-        button { padding: 20px; width: 90%; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 10px; margin-top: 15px; font-weight: bold; cursor: pointer; }
-        .status { color: #888; font-size: 14px; margin-top: 10px; }
+        body { background: #000; color: #0f0; text-align: center; font-family: sans-serif; margin: 0; padding: 10px; }
+        video { width: 100%; border-radius: 10px; background: #222; }
+        button { padding: 20px; width: 90%; font-size: 18px; background: #28a745; color: white; border: none; border-radius: 10px; margin-top: 10px; font-weight: bold; }
+        .info { font-size: 14px; color: #888; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div class="id-label">ID: <span id="my-id">Connecting...</span></div>
-    <video id="localVideo" autoplay muted playsinline></video><br>
-    <button onclick="startStream()">[ 1 ] เปิดกล้องส่งสัญญาณ</button>
-    <div id="status" class="status">สถานะ: รอการกดเปิดกล้อง</div>
+    <div style="padding: 10px; border: 1px solid #333; margin-bottom: 10px;">
+        ID: <span id="my-id" style="color: #fff;">กำลังเชื่อมต่อ...</span>
+    </div>
+    <video id="localVideo" autoplay muted playsinline></video>
+    <button id="startBtn" onclick="startCamera()">[ 1 ] เปิดกล้องส่งสัญญาณ</button>
+    <div id="status" class="info">สถานะ: รอการเปิดกล้อง</div>
 
     <script>
-        // ใช้ Google STUN Server ช่วยนำทางข้อมูล
         const peer = new Peer('NAVY-EMS-01', {
-            config: { 'iceServers': [{ url: 'stun:stun.l.google.com:19302' }] }
+            config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] }
         });
 
         let localStream;
 
         peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
-            document.getElementById('status').innerText = "ระบบพร้อมแล้ว (Ready)";
+            document.getElementById('status').innerText = "ระบบ Peer พร้อมแล้ว";
         });
 
-        async function startStream() {
+        async function startCamera() {
             try {
-                // เลือกใช้กล้องหลังของ VM780
+                // บังคับความละเอียดไม่สูงมากเพื่อให้เน็ตมือถือส่งไหว
                 localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" },
+                    video: { facingMode: "environment", width: 640, height: 480 },
                     audio: true
                 });
                 document.getElementById('localVideo').srcObject = localStream;
-                document.getElementById('status').innerText = "กล้องทำงานแล้ว รอศูนย์เรียกดู...";
+                document.getElementById('status').innerText = "กล้องพร้อมส่งสัญญาณ...";
+                document.getElementById('startBtn').style.background = "#555";
+                document.getElementById('startBtn').innerText = "กล้องทำงานอยู่";
             } catch (err) {
                 alert("เข้าถึงกล้องไม่ได้: " + err);
             }
         }
 
-        // เมื่อมีคนโทรเข้ามา ให้ส่งภาพไปให้เขา
+        // เมื่อมีการเรียกเข้ามา
         peer.on('call', call => {
-            console.log("Incoming call...");
-            document.getElementById('status').innerText = "🔴 กำลังไลฟ์สดไปยังศูนย์...";
-            call.answer(localStream); 
+            if (!localStream) {
+                alert("ศูนย์เรียกมา แต่คุณยังไม่ได้เปิดกล้อง!");
+                return;
+            }
+            document.getElementById('status').innerText = "🔴 กำลังส่งภาพสด...";
+            call.answer(localStream); // ตอบรับและส่ง Stream ไป
         });
 
         peer.on('error', err => {
             console.error(err);
-            if(err.type === 'unavailable-id') alert('ID นี้มีคนใช้งานอยู่แล้ว');
+            document.getElementById('status').innerText = "Error: " + err.type;
         });
     </script>
 </body>
