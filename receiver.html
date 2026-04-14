@@ -1,107 +1,26 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>EMS Dashboard - Receiver</title>
+    <title>RECEIVER</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-        .controls { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 500px; margin-bottom: 20px; }
-        
-        /* หน้าต่างลอยย่อขยายได้ */
-        #floatingWindow {
-            position: absolute; z-index: 999;
-            width: 400px; height: 320px;
-            min-width: 250px; min-height: 200px;
-            background: #000; border: 2px solid #333; border-radius: 8px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            top: 150px; left: 50px;
-            overflow: auto; resize: both;
-        }
-
-        #windowHeader {
-            padding: 8px 12px; background: #222; color: #00ff00;
-            cursor: move; display: flex; justify-content: space-between;
-            font-weight: bold; font-size: 13px; position: sticky; top: 0;
-        }
-
-        video { width: 100%; height: calc(100% - 35px); background: #000; object-fit: contain; }
-        input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; width: 180px; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .offline { color: #ff4444; }
-        .online { color: #00ff00; }
+        body { font-family: sans-serif; padding: 20px; }
+        video { width: 100%; max-width: 600px; background: #000; }
+        button { padding: 10px 20px; background: #007bff; color: #fff; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
-
-    <div class="controls">
-        <h2>ศูนย์สั่งการ EMS</h2>
-        <input type="text" id="targetId" value="NAVY-EMS-01" placeholder="ระบุรหัสกล้อง">
-        <button onclick="connectToCamera()">เรียกดูภาพสด</button>
-        <p><small>สถานะระบบ: <span id="peer-status">กำลังเตรียมพร้อม...</span></small></p>
-    </div>
-
-    <div id="floatingWindow">
-        <div id="windowHeader">
-            <span>🔴 LIVE: VM780</span>
-            <span id="stream-status" class="offline">OFFLINE</span>
-        </div>
-        <video id="remoteVideo" autoplay playsinline controls></video>
-    </div>
-
+    <h2>ศูนย์สั่งการ</h2>
+    <input type="text" id="id" value="NAVY-EMS-01">
+    <button onclick="connect()">[ 2 ] ดูภาพสด</button>
+    <hr>
+    <video id="remoteVideo" autoplay playsinline controls></video>
     <script>
-        // ตั้งค่า Peer (ฝั่งรับไม่ต้องใส่ ID ในวงเล็บ)
-        const peer = new Peer({
-            config: {
-                'iceServers': [
-                    { url: 'stun:stun.l.google.com:19302' },
-                    { url: 'stun:stun1.l.google.com:19302' }
-                ]
-            }
-        });
-
-        peer.on('open', id => {
-            document.getElementById('peer-status').innerText = "พร้อมเชื่อมต่อ (Your ID: " + id + ")";
-        });
-
-        function connectToCamera() {
-            const tid = document.getElementById('targetId').value;
-            document.getElementById('stream-status').innerText = "CONNECTING...";
-            
-            // โทรออกไปหา ID ของกล้อง
-            const call = peer.call(tid, new MediaStream());
-            
-            call.on('stream', stream => {
-                const video = document.getElementById('remoteVideo');
-                video.srcObject = stream;
-                document.getElementById('stream-status').innerText = "ONLINE";
-                document.getElementById('stream-status').className = "online";
-            });
-
-            call.on('error', err => {
-                alert("การเชื่อมต่อล้มเหลว: " + err);
-                document.getElementById('stream-status').innerText = "OFFLINE";
-            });
-        }
-
-        // ระบบลากหน้าต่าง
-        dragElement(document.getElementById("floatingWindow"));
-        function dragElement(elm) {
-            let p1=0, p2=0, p3=0, p4=0;
-            const head = document.getElementById("windowHeader");
-            head.onmousedown = (e) => {
-                if (e.target !== head && e.target.parentElement !== head) return;
-                e.preventDefault();
-                p3 = e.clientX; p4 = e.clientY;
-                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
-                document.onmousemove = (e) => {
-                    e.preventDefault();
-                    p1 = p3 - e.clientX; p2 = p4 - e.clientY;
-                    p3 = e.clientX; p4 = e.clientY;
-                    elm.style.top = (elm.offsetTop - p2) + "px";
-                    elm.style.left = (elm.offsetLeft - p1) + "px";
-                };
-            };
+        const peer = new Peer(); // ห้ามใส่ ID ในนี้เด็ดขาด
+        function connect() {
+            const call = peer.call(document.getElementById('id').value, new MediaStream());
+            call.on('stream', s => document.getElementById('remoteVideo').srcObject = s);
         }
     </script>
 </body>
