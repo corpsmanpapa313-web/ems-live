@@ -2,22 +2,22 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>SENDER - VM780</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMS SENDER - VM780</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <style>
-        body { background: #000; color: #0f0; text-align: center; font-family: sans-serif; margin: 0; padding: 10px; }
-        video { width: 100%; border-radius: 10px; background: #222; }
-        button { padding: 20px; width: 90%; font-size: 18px; background: #28a745; color: white; border: none; border-radius: 10px; margin-top: 10px; font-weight: bold; }
-        .info { font-size: 14px; color: #888; margin-top: 10px; }
+        body { background: #121212; color: #00ff00; text-align: center; font-family: sans-serif; margin: 0; padding: 15px; }
+        .id-box { background: #222; padding: 10px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px; font-weight: bold; }
+        video { width: 100%; max-width: 500px; border-radius: 12px; background: #000; border: 2px solid #444; }
+        button { width: 100%; padding: 20px; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 12px; margin-top: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        #status { color: #888; font-size: 14px; margin-top: 15px; }
     </style>
 </head>
 <body>
-    <div style="padding: 10px; border: 1px solid #333; margin-bottom: 10px;">
-        ID: <span id="my-id" style="color: #fff;">กำลังเชื่อมต่อ...</span>
-    </div>
+    <div class="id-box">รหัสกล้อง: <span id="my-id" style="color: #fff;">Connecting...</span></div>
     <video id="localVideo" autoplay muted playsinline></video>
     <button id="startBtn" onclick="startCamera()">[ 1 ] เปิดกล้องส่งสัญญาณ</button>
-    <div id="status" class="info">สถานะ: รอการเปิดกล้อง</div>
+    <div id="status">สถานะ: รอการกดปุ่มเปิดกล้อง</div>
 
     <script>
         const peer = new Peer('NAVY-EMS-01', {
@@ -28,38 +28,32 @@
 
         peer.on('open', id => {
             document.getElementById('my-id').innerText = id;
-            document.getElementById('status').innerText = "ระบบ Peer พร้อมแล้ว";
+            document.getElementById('status').innerText = "พร้อมใช้งาน (READY)";
         });
 
         async function startCamera() {
             try {
-                // บังคับความละเอียดไม่สูงมากเพื่อให้เน็ตมือถือส่งไหว
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment", width: 640, height: 480 },
                     audio: true
                 });
                 document.getElementById('localVideo').srcObject = localStream;
-                document.getElementById('status').innerText = "กล้องพร้อมส่งสัญญาณ...";
-                document.getElementById('startBtn').style.background = "#555";
-                document.getElementById('startBtn').innerText = "กล้องทำงานอยู่";
+                document.getElementById('status').innerText = "กล้องทำงานแล้ว รอศูนย์เรียกดู...";
+                document.getElementById('startBtn').style.background = "#444";
+                document.getElementById('startBtn').innerText = "กำลังออนไลน์...";
             } catch (err) {
                 alert("เข้าถึงกล้องไม่ได้: " + err);
             }
         }
 
-        // เมื่อมีการเรียกเข้ามา
         peer.on('call', call => {
-            if (!localStream) {
-                alert("ศูนย์เรียกมา แต่คุณยังไม่ได้เปิดกล้อง!");
-                return;
-            }
-            document.getElementById('status').innerText = "🔴 กำลังส่งภาพสด...";
-            call.answer(localStream); // ตอบรับและส่ง Stream ไป
+            console.log("ศูนย์สั่งการกำลังเรียกดูภาพ...");
+            document.getElementById('status').innerText = "🔴 กำลังส่งภาพสดไปยังศูนย์...";
+            call.answer(localStream); 
         });
 
         peer.on('error', err => {
-            console.error(err);
-            document.getElementById('status').innerText = "Error: " + err.type;
+            if(err.type === 'unavailable-id') alert('ID นี้ถูกใช้งานอยู่ (โปรดปิดหน้าเว็บอื่นที่ใช้ชื่อเดียวกัน)');
         });
     </script>
 </body>
