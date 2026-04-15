@@ -1,38 +1,51 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>SENDER - VM780</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMS SENDER</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <style>
         body { background: #000; color: #0f0; text-align: center; font-family: sans-serif; padding: 15px; }
-        video { width: 100%; border-radius: 10px; background: #222; }
-        button { width: 100%; padding: 20px; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 12px; margin-top: 15px; font-weight: bold; }
+        .id-display { background: #222; padding: 15px; border-radius: 10px; border: 2px solid #333; margin-bottom: 15px; }
+        video { width: 100%; border-radius: 10px; background: #111; border: 1px solid #333; }
+        button { width: 100%; padding: 20px; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 12px; margin-top: 20px; font-weight: bold; }
+        .status { color: #888; font-size: 14px; margin-top: 15px; }
     </style>
 </head>
 <body>
-    <div style="margin-bottom:10px;">ID: <span id="my-id" style="color:#fff;">Loading...</span></div>
+    <div class="id-display">
+        ID ของเครื่องนี้คือ:<br>
+        <span id="my-id" style="color: #fff; font-size: 24px; font-weight: bold;">กำลังสร้าง ID...</span>
+    </div>
     <video id="localVideo" autoplay muted playsinline></video>
-    <button onclick="start()">[ 1 ] เปิดกล้องส่งสัญญาณ</button>
-    <div id="status" style="margin-top:10px; color:#888;">สถานะ: รอเปิดกล้อง</div>
+    <button onclick="startStream()">[ 1 ] เปิดกล้องส่งสัญญาณ</button>
+    <div id="status" class="status">สถานะ: รอการกดเปิดกล้อง</div>
 
     <script>
-        const peer = new Peer('NAVY-EMS-01', {
-            config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] }
-        });
+        // ใช้ระบบสุ่ม ID เพื่อป้องกันชื่อชนกัน
+        const peer = new Peer(); 
         let localStream;
-        peer.on('open', id => document.getElementById('my-id').innerText = id);
-        
-        async function start() {
+
+        peer.on('open', id => {
+            document.getElementById('my-id').innerText = id;
+            document.getElementById('status').innerText = "พร้อมใช้งาน";
+        });
+
+        async function startStream() {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}, audio: true});
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" },
+                    audio: true
+                });
                 document.getElementById('localVideo').srcObject = localStream;
-                document.getElementById('status').innerText = "กล้องพร้อมส่งภาพ...";
-            } catch (e) { alert("Error: " + e); }
+                document.getElementById('status').innerText = "กล้องพร้อมส่งภาพ (ส่ง ID ด้านบนให้ศูนย์)";
+            } catch (err) {
+                alert("เปิดกล้องไม่ได้: " + err);
+            }
         }
 
         peer.on('call', call => {
-            console.log("ศูนย์กำลังเรียกดู...");
             document.getElementById('status').innerText = "🔴 กำลังส่งภาพสด...";
             call.answer(localStream);
         });
