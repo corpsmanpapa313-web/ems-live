@@ -2,58 +2,39 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EMS SENDER - VM780</title>
+    <title>SENDER - VM780</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <style>
-        body { background: #121212; color: #00ff00; text-align: center; font-family: sans-serif; margin: 0; padding: 15px; }
-        .id-box { background: #222; padding: 10px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px; font-weight: bold; }
-        video { width: 100%; max-width: 500px; border-radius: 12px; background: #000; border: 2px solid #444; }
-        button { width: 100%; padding: 20px; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 12px; margin-top: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        #status { color: #888; font-size: 14px; margin-top: 15px; }
+        body { background: #000; color: #0f0; text-align: center; font-family: sans-serif; padding: 15px; }
+        video { width: 100%; border-radius: 10px; background: #222; }
+        button { width: 100%; padding: 20px; font-size: 20px; background: #28a745; color: white; border: none; border-radius: 12px; margin-top: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="id-box">รหัสกล้อง: <span id="my-id" style="color: #fff;">Connecting...</span></div>
+    <div style="margin-bottom:10px;">ID: <span id="my-id" style="color:#fff;">Loading...</span></div>
     <video id="localVideo" autoplay muted playsinline></video>
-    <button id="startBtn" onclick="startCamera()">[ 1 ] เปิดกล้องส่งสัญญาณ</button>
-    <div id="status">สถานะ: รอการกดปุ่มเปิดกล้อง</div>
+    <button onclick="start()">[ 1 ] เปิดกล้องส่งสัญญาณ</button>
+    <div id="status" style="margin-top:10px; color:#888;">สถานะ: รอเปิดกล้อง</div>
 
     <script>
         const peer = new Peer('NAVY-EMS-01', {
-            config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] }
+            config: { 'iceServers': [{ urls: 'stun:stun.l.google.com:19302' }] }
         });
-
         let localStream;
-
-        peer.on('open', id => {
-            document.getElementById('my-id').innerText = id;
-            document.getElementById('status').innerText = "พร้อมใช้งาน (READY)";
-        });
-
-        async function startCamera() {
+        peer.on('open', id => document.getElementById('my-id').innerText = id);
+        
+        async function start() {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment", width: 640, height: 480 },
-                    audio: true
-                });
+                localStream = await navigator.mediaDevices.getUserMedia({video: {facingMode: "environment"}, audio: true});
                 document.getElementById('localVideo').srcObject = localStream;
-                document.getElementById('status').innerText = "กล้องทำงานแล้ว รอศูนย์เรียกดู...";
-                document.getElementById('startBtn').style.background = "#444";
-                document.getElementById('startBtn').innerText = "กำลังออนไลน์...";
-            } catch (err) {
-                alert("เข้าถึงกล้องไม่ได้: " + err);
-            }
+                document.getElementById('status').innerText = "กล้องพร้อมส่งภาพ...";
+            } catch (e) { alert("Error: " + e); }
         }
 
         peer.on('call', call => {
-            console.log("ศูนย์สั่งการกำลังเรียกดูภาพ...");
-            document.getElementById('status').innerText = "🔴 กำลังส่งภาพสดไปยังศูนย์...";
-            call.answer(localStream); 
-        });
-
-        peer.on('error', err => {
-            if(err.type === 'unavailable-id') alert('ID นี้ถูกใช้งานอยู่ (โปรดปิดหน้าเว็บอื่นที่ใช้ชื่อเดียวกัน)');
+            console.log("ศูนย์กำลังเรียกดู...");
+            document.getElementById('status').innerText = "🔴 กำลังส่งภาพสด...";
+            call.answer(localStream);
         });
     </script>
 </body>
