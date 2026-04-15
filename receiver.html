@@ -2,60 +2,96 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>RECEIVER - Command Center</title>
+    <title>EMS Dashboard - Receiver</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
-        .box { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 450px; }
-        #video-container { 
-            position: absolute; top: 20px; right: 20px; width: 400px; 
-            background: #000; border-radius: 10px; overflow: hidden; border: 2px solid #333;
+        body { font-family: 'Sarabun', sans-serif; background: #f4f7f9; margin: 0; padding: 20px; }
+        .box { background: #fff; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 400px; }
+        #floatingWindow {
+            position: absolute; z-index: 999; top: 100px; left: 450px;
+            width: 480px; height: 360px; min-width: 300px;
+            background: #000; border: 2px solid #333; border-radius: 10px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4); overflow: auto; resize: both;
         }
-        video { width: 100%; display: block; }
-        button { padding: 12px 24px; background: #007bff; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        input { padding: 11px; border: 1px solid #ddd; border-radius: 6px; width: 150px; }
+        #windowHeader {
+            padding: 10px; background: #222; color: #0f0; cursor: move;
+            display: flex; justify-content: space-between; font-weight: bold; font-size: 14px;
+        }
+        video { width: 100%; height: calc(100% - 40px); background: #000; object-fit: contain; }
+        input { padding: 12px; border: 1px solid #ddd; border-radius: 8px; width: 160px; font-size: 16px; }
+        button { padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        button:hover { background: #0056b3; }
+        #info { font-size: 12px; color: #777; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="box">
-        <h3>ศูนย์สั่งการ EMS</h3>
+        <h2 style="margin-top:0;">ศูนย์สั่งการ EMS</h2>
         <input type="text" id="targetId" value="NAVY-EMS-01">
         <button onclick="connect()">[ 2 ] ดูภาพสด</button>
-        <p id="info" style="font-size: 12px; color: #888;">กำลังโหลดระบบ...</p>
+        <p id="info">ระบบกำลังเริ่มทำงาน...</p>
     </div>
 
-    <div id="video-container">
-        <div style="background: #222; color: #0f0; padding: 5px 10px; font-size: 12px;">🔴 LIVE MONITOR</div>
+    <div id="floatingWindow">
+        <div id="windowHeader">
+            <span>🔴 LIVE MONITOR: VM780</span>
+            <span id="status-text" style="color:#888;">OFFLINE</span>
+        </div>
         <video id="remoteVideo" autoplay playsinline controls></video>
     </div>
 
     <script>
-        const peer = new Peer(); // สุ่ม ID เอง
+        const peer = new Peer();
 
         peer.on('open', id => {
-            document.getElementById('info').innerText = "ระบบศูนย์พร้อมแล้ว (ID: " + id + ")";
+            document.getElementById('info').innerText = "ศูนย์สั่งการพร้อมเชื่อมต่อ";
         });
 
         function connect() {
             const tid = document.getElementById('targetId').value;
-            document.getElementById('info').innerText = "กำลังเชื่อมต่อไปยัง " + tid + "...";
+            document.getElementById('status-text').innerText = "CONNECTING...";
             
-            // ใช้ MediaStream เปล่าเพื่อเริ่มการเชื่อมต่อ
+            // ส่ง MediaStream เปล่าเพื่อขอรับข้อมูล
             const call = peer.call(tid, new MediaStream());
             
-            call.on('stream', remoteStream => {
+            call.on('stream', stream => {
+                console.log("ได้รับสัญญาณภาพแล้ว");
                 const video = document.getElementById('remoteVideo');
-                video.srcObject = remoteStream;
-                // บังคับให้เล่นวิดีโอ (ป้องกัน Browser บล็อก)
-                video.play().catch(e => console.log("Auto-play blocked, wait for user interaction"));
-                document.getElementById('info').innerText = "เชื่อมต่อสำเร็จ!";
+                video.srcObject = stream;
+                
+                // บังคับให้วิดีโอเล่น (Auto-play fix)
+                video.onloadedmetadata = () => {
+                    video.play().catch(e => console.error("Auto-play blocked"));
+                };
+
+                document.getElementById('status-text').innerText = "ONLINE";
+                document.getElementById('status-text').style.color = "#f00";
             });
 
             call.on('error', err => {
-                alert("การเชื่อมต่อผิดพลาด: " + err);
-                document.getElementById('info').innerText = "การเชื่อมต่อล้มเหลว";
+                alert("เชื่อมต่อไม่สำเร็จ: " + err);
             });
+        }
+
+        // ระบบลากหน้าต่าง
+        dragElement(document.getElementById("floatingWindow"));
+        function dragElement(elm) {
+            let p1=0, p2=0, p3=0, p4=0;
+            const head = document.getElementById("windowHeader");
+            head.onmousedown = (e) => {
+                if (e.target !== head && e.target.parentElement !== head) return;
+                e.preventDefault();
+                p3 = e.clientX; p4 = e.clientY;
+                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+                document.onmousemove = (e) => {
+                    e.preventDefault();
+                    p1 = p3 - e.clientX; p2 = p4 - e.clientY;
+                    p3 = e.clientX; p4 = e.clientY;
+                    elm.style.top = (elm.offsetTop - p2) + "px";
+                    elm.style.left = (elm.offsetLeft - p1) + "px";
+                };
+            };
         }
     </script>
 </body>
